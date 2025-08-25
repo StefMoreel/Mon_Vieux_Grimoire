@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 
+
 const bookSchema = mongoose.Schema({ // Define the schema for the Book model
     userId: { type: String, required: true },
     title: { type: String, required: true },

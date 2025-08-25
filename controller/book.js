@@ -1,5 +1,4 @@
 const Book = require('../models/Book');
-const Rating = require('../models/Rating');
 
 // Get all books from the database
 exports.getAllBooks = (req, res, next) => {
