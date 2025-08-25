@@ -79,7 +79,7 @@ exports.addRating = async (req, res, next) => {
 exports.updateBook = (req, res, next) => {
     const bookObject = req.file ? {
         ...JSON.parse(req.body.book), // Parse book details from request body
-        imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`
+        imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}` // Update image URL if a new image is uploaded
     } : { ...req.body }; // If no new image, use existing details 
     delete bookObject._userId; // Remove _userId if it exists in the request body
     
