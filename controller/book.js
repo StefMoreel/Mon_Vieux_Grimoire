@@ -28,11 +28,11 @@ exports.createBook = (req, res, next) => {
     delete bookObject._id; // Remove _id if it exists in the request body
     delete bookObject._userId; // Remove _userId if it exists in the request body
 
-    const book = new Book({
-        ...bookObject,
+    const book = new Book({ // Create new book instance with image URL
+        ...bookObject, // Spread the book details from the request body 
         userId: req.auth.userId, // Assuming req.auth.userId is set by authentication middleware
-        imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`
-    }); // Create new book instance with image URL
+        imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}` // Construct image URL
+    }); 
     book.save()
         .then(() => res.status(201).json({ message: 'Book created successfully!' })) // Success response 
         .catch(error => res.status(400).json({ error })); // Handle any errors during save process 
