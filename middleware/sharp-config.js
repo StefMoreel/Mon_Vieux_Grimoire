@@ -12,7 +12,7 @@ module.exports = (req, res, next) => {
     const resizedImagePath = path.join(__dirname, '../images', 'resized-' + req.file.filename);
 
     sharp(imagePath)
-        .resize(206, 260) // Resize image to 300x500 pixels
+        .resize(206, 260) // Resize image to 206x260 pixels
         .toFile(resizedImagePath) // Save the resized image to a new file
         .then(() => {
             fs.unlinkSync(imagePath); // Delete the original uploaded image
