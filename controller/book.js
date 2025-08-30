@@ -1,4 +1,5 @@
 const Book = require('../models/Book');
+const fs = require('fs');
 
 // Get all books from the database
 exports.getAllBooks = (req, res, next) => {
@@ -15,6 +16,7 @@ exports.getAllBooks = (req, res, next) => {
 exports.getBookById = (req, res, next) => {
     Book.findOne({ _id: req.params.id }) // Find the book by ID
         .then(book => {
+            book.averageRating = Number(book.averageRating.toFixed(2)); // Ensure averageRating is rounded to 2 decimal places
             res.status(200).json(book); // Return the book details in JSON format
         })
         .catch(error => {
@@ -65,6 +67,7 @@ exports.addRating = async (req, res, next) => {
     const grades = book.ratings.map(r => r.grade); // Extract all grades
     const sum = grades.reduce((acc, g) => acc + g, 0); // Sum all grades
     book.averageRating = sum / grades.length; // Calculate new average rating
+    
 
     // Save the updated book with the new rating and average rating 
     const saved = await book.save();
@@ -85,11 +88,19 @@ exports.updateBook = (req, res, next) => {
     
     Book.findOne({ _id: req.params.id }) // Find the book by ID
         .then(book => {
+            let oldImageUrl = book.imageUrl; // Store the old image URL for potential deletion
             if (book.userId !== req.auth.userId) { // Check if the authenticated user is the owner of the book
                 return res.status(403).json({ error: 'Unauthorized request' }); // Unauthorized if not the owner
             }
             Book.updateOne({ _id: req.params.id }, { ...bookObject, _id: req.params.id }) // Update the book with new details
-                .then(() => res.status(200).json({ message: 'Book updated successfully!' })) // Success response
+                .then(() => {
+                    if (req.file && oldImageUrl) { // If a new image was uploaded and there was an old image, delete the old image file
+                        const oldFilename = oldImageUrl.split('/images/')[1]; // Extract filename from the old image URL 
+                        fs.unlink(`images/${oldFilename}`, (err) => { // Delete the old image file from the server
+                            if (err) console.error('Error deleting old image:', err); // Log any errors during deletion
+                        });
+                    }
+                res.status(200).json({ message: 'Book updated successfully!' })}) // Success response
                 .catch(error => res.status(400).json({ error }));
         })
         .catch(error => {
@@ -101,6 +112,7 @@ exports.updateBook = (req, res, next) => {
 exports.deleteBook = (req, res, next) => {
     Book.findOne({ _id: req.params.id }) // Find the book by ID
         .then(book => { // Check if the book exists
+            let oldImageUrl = book.imageUrl; // Store the old image URL for potential deletion
             if (!book) {
                 return res.status(404).json({ error: 'Book not found' }); // Book not found
             } 
@@ -108,7 +120,14 @@ exports.deleteBook = (req, res, next) => {
                 return res.status(403).json({ error: 'Unauthorized request' }); // Unauthorized if not the owner
             }
             Book.deleteOne({ _id: req.params.id }) // Delete the book from the database 
-                .then(() => res.status(200).json({ message: 'Book deleted successfully!' })) // Success response 
+                .then(() => {
+                    if (oldImageUrl) { // If there was an image associated with the book, delete the image file
+                        const oldFilename = oldImageUrl.split('/images/')[1]; // Extract filename from the image URL 
+                        fs.unlink(`images/${oldFilename}`, (err) => { // Delete the image file from the server
+                            if (err) console.error('Error deleting image:', err); // Log any errors during deletion
+                        });
+                    }
+                    res.status(200).json({ message: 'Book deleted successfully!' })}) // Success response 
                 .catch(error => res.status(400).json({ error })); // Error during deletion 
         })
         .catch(error => {

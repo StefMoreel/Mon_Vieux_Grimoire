@@ -14,7 +14,12 @@ const bookSchema = mongoose.Schema({ // Define the schema for the Book model
             grade: { type: Number, required: true, min: 1, max: 5 }
         }
     ],
-    averageRating: { type: Number, min: 0, max: 5 }
+    averageRating: {
+    type: Number,
+    min: 0,
+    max: 5,
+    set: v => Math.round((Number(v) + Number.EPSILON) * 100) / 100 // ⬅️ arrondi à 2 décimales
+  }
 });
 
 
