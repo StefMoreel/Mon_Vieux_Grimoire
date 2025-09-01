@@ -41,7 +41,7 @@ frontend/
 
 ### 1. Cloner le repo
 ```bash
-git clone https://github.com/<ton-user>/<ton-repo>.git
+git clone https://github.com/StefMoreel/Mon_Vieux_Grimoire.git
 cd mon-vieux-grimoire
 ```
 
@@ -57,15 +57,6 @@ cd frontend
 npm install
 ```
 
-### 3. Variables d’environnement
-Créer un fichier `.env` à la racine du backend avec :
-```env
-MONGO_URI=<url de connexion MongoDB Atlas>
-JWT_SECRET=<ta_clé_secrète_jwt>
-PORT=4000
-```
-
----
 
 ## ▶️ Lancer le projet
 
@@ -113,5 +104,5 @@ npm start
 ---
 
 ## 👤 Auteur
-Projet réalisé par **[Ton Nom]** – développeur backend.  
+Projet réalisé par Stéphane Moreel – développeur backend.  
 Partenariat avec un développeur frontend pour l’intégration React.
