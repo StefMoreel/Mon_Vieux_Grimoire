@@ -3,7 +3,18 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcrypt');
 
 exports.signup = (req, res, next) => {
-    if (!req.body.email || !req.body.password) { return res .status(400) .json({ error: 'Merci de renseigner votre e-mail et mot de passe' }); } // Validate email and password presence
+    
+    if (!req.body.email || !req.body.password) { 
+        return res .status(400) .json({ error: 'Merci de renseigner votre e-mail et mot de passe' }); 
+    } // Validate email and password presence
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/; // Basic email format validation
+    if (!emailRegex.test(req.body.email)) { // Validate email format
+        return res.status(400).json({ error: "Format d'e-mail invalide" });
+    }
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/; // Password complexity validation
+    if (!passwordRegex.test(req.body.password)) { // Validate password complexity
+        return res.status(400).json({ error: 'Le mot de passe doit contenir au moins 8 caractères incluant une majuscule, une minuscule, un nombre et un caractère spécial'});
+    }
     bcrypt.hash(req.body.password, 10) // Hash the password with a salt round of 10
         .then(hash => {
             const user = new User({ // Create new user instance 
@@ -34,7 +45,7 @@ exports.login = (req, res, next) => {
                         userId: user._id,
                         token: jwt.sign(
                             { userId: user._id },
-                            'RANDOM_TOKEN_SECRET',
+                            process.env.JWT_SECRET, // Use secret from environment variables
                             { expiresIn: '24h' }
                         )
                     });
