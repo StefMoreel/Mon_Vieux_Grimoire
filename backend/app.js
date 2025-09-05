@@ -5,6 +5,7 @@ const helmet = require('helmet');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
+const xss = require('xss-clean');
 const path = require('path');
 const mongoose = require('mongoose');
 
@@ -48,8 +49,9 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-// 4. express-mongo-sanitize : Nettoie les entrées utilisateur pour éviter les injections NoSQL
-app.use(mongoSanitize());
+// 4. express-mongo-sanitize : Nettoie les entrées utilisateur pour éviter les injections NoSQL et XSS
+app.use(mongoSanitize()); // Protège contre les injections NoSQL
+app.use(xss()); // Protège contre les attaques XSS
 
 // 5. Middleware pour les fichiers statiques (images)
 app.use('/images', express.static(path.join(__dirname, 'images')));
