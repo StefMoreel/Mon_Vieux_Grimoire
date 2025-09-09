@@ -54,7 +54,12 @@ app.use(mongoSanitize()); // Protège contre les injections NoSQL
 app.use(xss()); // Protège contre les attaques XSS
 
 // 5. Middleware pour les fichiers statiques (images)
-app.use('/images', express.static(path.join(__dirname, 'images')));
+app.use('/images', express.static('images', {
+  setHeaders: (res, path) => {
+    res.header('Access-Control-Allow-Origin', process.env.CLIENT_URL || 'http://localhost:3000');
+    res.header('Access-Control-Allow-Credentials', 'true');
+  }
+}));
 
 // 6. Parsing des requêtes JSON
 app.use(express.json());
