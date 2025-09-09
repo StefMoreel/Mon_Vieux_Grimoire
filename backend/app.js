@@ -34,7 +34,7 @@ app.use(
 // 2. CORS : Autorise les requêtes cross-origin
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    origin: [process.env.CLIENT_URL, 'http://localhost:3000'], // Autorise les deux origines
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['X-Requested-With', 'Content-Type', 'Authorization'],
     credentials: true,
