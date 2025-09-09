@@ -1,5 +1,6 @@
 const Book = require('../models/Book');
 const fs = require('fs');
+const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
 
 // Get all books from the database
 exports.getAllBooks = (req, res, next) => {
@@ -33,7 +34,7 @@ exports.createBook = (req, res, next) => {
     const book = new Book({ // Create new book instance with image URL
         ...bookObject, // Spread the book details from the request body 
         userId: req.auth.userId, // Assuming req.auth.userId is set by authentication middleware
-        imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}` // Construct image URL
+        imageUrl: `${baseUrl}/images/${req.file.filename}` // Construct image URL
     }); 
     book.save()
         .then(() => res.status(201).json({ message: 'Book created successfully!' })) // Success response 
@@ -82,7 +83,7 @@ exports.addRating = async (req, res, next) => {
 exports.updateBook = (req, res, next) => {
     const bookObject = req.file ? {
         ...JSON.parse(req.body.book), // Parse book details from request body
-        imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}` // Update image URL if a new image is uploaded
+        imageUrl: `${baseUrl}` // Update image URL if a new image is uploaded
     } : { ...req.body }; // If no new image, use existing details 
     delete bookObject._userId; // Remove _userId if it exists in the request body
     
