@@ -1,6 +1,5 @@
 const Book = require('../models/Book');
 const fs = require('fs');
-const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
 
 // Get all books from the database
 exports.getAllBooks = (req, res, next) => {
@@ -27,6 +26,7 @@ exports.getBookById = (req, res, next) => {
 
 // Create a new book in the database with image upload handling via multer middleware 
 exports.createBook = (req, res, next) => {
+    const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`; // Base URL for constructing image URL
     const bookObject = JSON.parse(req.body.book);
     delete bookObject._id; // Remove _id if it exists in the request body
     delete bookObject._userId; // Remove _userId if it exists in the request body
@@ -81,6 +81,7 @@ exports.addRating = async (req, res, next) => {
 
 // Update book details in the database, including image if provided 
 exports.updateBook = (req, res, next) => {
+    const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`; // Base URL for constructing image URL
     const bookObject = req.file ? {
         ...JSON.parse(req.body.book), // Parse book details from request body
         imageUrl: `${baseUrl}` // Update image URL if a new image is uploaded
