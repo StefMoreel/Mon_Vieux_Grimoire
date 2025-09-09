@@ -23,7 +23,7 @@ app.use(
   helmet.contentSecurityPolicy({
     directives: {
       defaultSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "http://localhost:4000", "blob:"],
+      imgSrc: ["'self'", "data:", process.env.CLIENT_URL, "https://mon-vieux-grimoire-5a88.onrender.com", "blob:"],
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       fontSrc: ["'self'"],
