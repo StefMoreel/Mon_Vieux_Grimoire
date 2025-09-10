@@ -39,21 +39,28 @@ exports.getBookById = (req, res, next) => {
 };
 
 // Create a new book in the database with image upload handling via multer middleware 
-exports.createBook = (req, res, next) => {
-    const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`; // Base URL for constructing image URL
-    const bookObject = JSON.parse(req.body.book);
-    delete bookObject._id; // Remove _id if it exists in the request body
-    delete bookObject._userId; // Remove _userId if it exists in the request body
+exports.createBook = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ where:'multer', message:'Image manquante (champ "image")' });
 
-    const book = new Book({ // Create new book instance with image URL
-        ...bookObject, // Spread the book details from the request body 
-        userId: req.auth.userId, // Assuming req.auth.userId is set by authentication middleware
-        imageUrl: `${baseUrl}/images/${req.file.filename}` // Construct image URL
-    }); 
-    book.save()
-        .then((savedBook) => res.status(201).json(savedBook)) // Renvoie le livre sauvegardé
-        .catch(error => res.status(400).json({ error }));
+    const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+    const book = new Book({
+      ...req.body,                 // validateBook aplatit déjà si besoin
+      userId: req.auth.userId,
+      imageUrl: `${baseUrl}/images/${req.file.filename}`,
+    });
+
+    const saved = await book.save();
+    return res.status(201).json(saved);
+  } catch (err) {
+    console.error('createBook error:', err);
+    if (err?.name === 'ValidationError') {
+      return res.status(400).json({ where:'mongoose', message: err.message, errors: err.errors });
+    }
+    return res.status(500).json({ where:'controller', message: err?.message || 'Erreur interne du serveur' });
+  }
 };
+
 
 // Get the top 3 best-rated books from the database
 exports.getBestRatedBooks = (req, res, next) => {

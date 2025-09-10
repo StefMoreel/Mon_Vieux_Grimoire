@@ -1,6 +1,21 @@
+// middleware/userValidator.js
 const { body, validationResult } = require('express-validator');
 
-// Validation pour l'inscription utilisateur
+// --- util: aplatit req.body.book si présent (string JSON) ---
+function parseBookIfNeeded(req, res, next) {
+  if (req.body && typeof req.body.book === 'string') {
+    try {
+      const parsed = JSON.parse(req.body.book);
+      // expose les champs plats pour les validators
+      req.body = { ...req.body, ...parsed };
+    } catch (e) {
+      return res.status(400).json({ errors: [{ msg: 'book doit être une chaîne JSON valide', path: 'book', location: 'body' }] });
+    }
+  }
+  next();
+}
+
+// Validation pour l'inscription utilisateur (inchangé)
 const validateSignup = [
   body('email').isEmail().withMessage("Format d'email invalide"),
   body('password')
@@ -11,29 +26,25 @@ const validateSignup = [
     .matches(/[@$!%*?&]/).withMessage("Doit contenir un caractère spécial"),
   (req, res, next) => {
     const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
     next();
   }
 ];
 
-// Validation pour la création d’un livre
+// Validation pour la création d’un livre (gère book JSON ou champs plats)
 const validateBook = [
-  body('title').notEmpty().withMessage("Le titre est requis"),
-  body('author').notEmpty().withMessage("L'auteur est requis"),
-  body('year').isInt({ min: 0 }).withMessage("L'année doit être un nombre positif"),
-  body('genre').notEmpty().withMessage("Le genre est requis"),
+  parseBookIfNeeded,                                  // <-- important : avant les règles
+  body('title').trim().notEmpty().withMessage("Le titre est requis"),
+  body('author').trim().notEmpty().withMessage("L'auteur est requis"),
+  body('year')
+    .toInt()                                          // convertit "2024" -> 2024
+    .isInt({ min: 1 }).withMessage("L'année doit être un nombre positif"),
+  body('genre').trim().notEmpty().withMessage("Le genre est requis"),
   (req, res, next) => {
     const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
     next();
   }
 ];
 
-module.exports = {
-  validateSignup,
-  validateBook
-};
+module.exports = { validateSignup, validateBook };

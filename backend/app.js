@@ -57,11 +57,8 @@ app.use(xss()); // Protège contre les attaques XSS
 
 // 5. Middleware pour les fichiers statiques (images)
 const IMAGES_DIR = process.env.IMAGES_DIR || path.join(__dirname, 'images');
-app.use('/images', express.static(IMAGES_DIR, {
-  index: false,
-  immutable: true,
-  maxAge: '1y',
-}));
+app.use('/images', express.static(IMAGES_DIR));
+
 
 // 6. Parsing des requêtes JSON
 app.use(express.json());
@@ -85,15 +82,17 @@ app.use((err, req, res, next) => {
 });
 
 // handler d’erreurs global
+const multerLib = require('multer');
+
 app.use((err, req, res, next) => {
+  console.error('[ERROR]', err); // ← regarde les Logs Render
   if (err instanceof multerLib.MulterError) {
-    return res.status(400).json({ where: 'multer', code: err.code, message: err.message });
+    return res.status(400).json({ where:'multer', code: err.code, message: err.message });
   }
-  if (err && err.message && err.message.includes('Type de fichier non autorisé')) {
-    return res.status(400).json({ where: 'fileFilter', message: err.message });
+  if (err?.name === 'ValidationError') {
+    return res.status(400).json({ where:'mongoose', message: err.message, errors: err.errors });
   }
-  console.error('Unhandled error:', err);
-  return res.status(400).json({ where: 'unknown', message: err.message || 'Bad Request' });
+  return res.status(500).json({ where:'unknown', message: err?.message || 'Erreur interne du serveur' });
 });
 
 // Export de l'application
