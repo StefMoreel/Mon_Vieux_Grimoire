@@ -1,26 +1,37 @@
+// middleware/sharp-config.js
 const sharp = require('sharp');
-const path = require('path');
-const fs = require('fs');
+const path = require('node:path');
+const fs = require('node:fs/promises');
 
-// Middleware to process and resize uploaded images using Sharp
-module.exports = (req, res, next) => {
-    if (!req.file) {
-        return next(); // If no file is uploaded, proceed to the next middleware
-    }
+// Même dossier que Multer et express.static
+const IMAGES_DIR = process.env.IMAGES_DIR || path.join(__dirname, '..', 'images');
 
-    const imagePath = path.join(__dirname, '../images', req.file.filename);
-    const resizedImagePath = path.join(__dirname, '../images', 'resized-' + req.file.filename);
+module.exports = async (req, res, next) => {
+  try {
+    if (!req.file) return next();
 
-    sharp(imagePath)
-        .resize(206, 260) // Resize image to 206x260 pixels
-        .toFile(resizedImagePath) // Save the resized image to a new file
-        .then(() => {
-            fs.unlinkSync(imagePath); // Delete the original uploaded image
-            req.file.filename = 'resized-' + req.file.filename; // Update the filename in the request object
-            next(); // Proceed to the next middleware
-        })
-        .catch(err => {
-            console.error('Error processing image with Sharp:', err);
-            next(err); // Pass any errors to the next middleware
-        });
-}
+    // Chemin réel du fichier uploadé par Multer
+    const inPath = req.file.path || path.join(IMAGES_DIR, req.file.filename);
+
+    // Construit un nom final propre : garde l’extension d’origine
+    const parsed = path.parse(req.file.filename);
+    const finalName = `${parsed.name}-resized${parsed.ext}`;
+    const outPath = path.join(IMAGES_DIR, finalName);
+
+    // Resize (206x260) — Sharp déduit le format depuis l’extension du nom de sortie
+    await sharp(inPath).resize(206, 260).toFile(outPath);
+
+    // Supprime l’original (ignore si déjà supprimé)
+    await fs.rm(inPath, { force: true });
+
+    // IMPORTANT : refléter le nouveau fichier pour les étapes suivantes / DB
+    req.file.filename = finalName;
+    req.file.path = outPath;
+
+    return next();
+  } catch (err) {
+    console.error('Sharp error:', err);
+    // Laisse l’error handler global renvoyer 400/500
+    return next(err);
+  }
+};
