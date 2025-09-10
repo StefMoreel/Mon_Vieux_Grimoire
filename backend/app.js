@@ -1,4 +1,22 @@
-// ... tes imports et la connexion Mongo au-dessus
+require('dotenv').config(); // Charge les variables d'environnement dès le début
+
+const express = require('express');
+const helmet = require('helmet');
+const cors = require('cors');
+const rateLimit = require('express-rate-limit');
+const mongoSanitize = require('express-mongo-sanitize');
+const xss = require('xss-clean');
+const path = require('node:path');
+const mongoose = require('mongoose');
+const multer = require('multer');
+
+// Connexion à MongoDB
+mongoose.connect(process.env.MONGO_URI, {
+  dbName: process.env.MONGO_DBNAME || 'test',
+
+})
+  .then(() => console.log('✅ Connexion à MongoDB réussie !'))
+  .catch((err) => console.error('❌ Connexion à MongoDB échouée :', err.message));
 
 const app = express();
 
@@ -86,7 +104,7 @@ app.use((req, res) => {
 });
 
 // 9) Un SEUL handler d’erreurs global (fusion Multer/Mongoose)
-const multer = require('multer'); // attention: une seule importation dans le fichier
+
 app.use((err, req, res, next) => {
   console.error('[ERROR]', err);
   if (err instanceof multer.MulterError) {
