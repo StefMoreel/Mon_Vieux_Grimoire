@@ -78,7 +78,6 @@ const apiLimiter = rateLimit({
   legacyHeaders: false,
   statusCode: 429,
   message: { error: 'Trop de requêtes, réessayez plus tard.' },
-  keyGenerator: (req) => req.ip,
   skip: (req) => req.method === 'OPTIONS',
   handler: (req, res /* , next, options */) => {
     const reset = res.getHeader('RateLimit-Reset');
