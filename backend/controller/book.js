@@ -1,6 +1,6 @@
 const Book = require('../models/Book');
 const fs = require('fs');
-const cloudinary = require('../services/cloudinary.js');
+const cloudinary = require('../services/cloudinary-config');
 
 // Get all books from the database
 exports.getAllBooks = (req, res, next) => {
