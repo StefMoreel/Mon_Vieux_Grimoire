@@ -99,6 +99,8 @@ const userRoutes = require('./Routes/user');
 app.use('/api/books', bookRoutes);
 app.use('/api/auth', userRoutes);
 
+app.use('/debug', require('./Routes/debug'));
+
 // 8) 404
 app.use((req, res) => {
   res.status(404).json({ error: 'Ressource introuvable' });
