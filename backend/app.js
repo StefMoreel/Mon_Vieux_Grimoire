@@ -10,8 +10,10 @@ const path = require('path');
 const mongoose = require('mongoose');
 
 // Connexion à MongoDB
-mongoose.connect(process.env.MONGO_URI || 'mongodb+srv://stefksp:f9_j7Pr$CmT63aT@cluster0.artvton.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0', {
+mongoose.connect(process.env.MONGO_URI, {
   dbName: process.env.MONGO_DBNAME || 'test',
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
 })
   .then(() => console.log('✅ Connexion à MongoDB réussie !'))
   .catch((err) => console.error('❌ Connexion à MongoDB échouée :', err.message));
