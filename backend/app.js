@@ -8,6 +8,7 @@ const mongoSanitize = require('express-mongo-sanitize');
 const xss = require('xss-clean');
 const path = require('node:path');
 const mongoose = require('mongoose');
+const multerLib = require('multer');
 
 // Connexion à MongoDB
 mongoose.connect(process.env.MONGO_URI, {
@@ -81,6 +82,18 @@ app.use((req, res) => {
 app.use((err, req, res, next) => {
   console.error('❌ Erreur serveur :', err);
   res.status(500).json({ error: 'Erreur interne du serveur' });
+});
+
+// handler d’erreurs global
+app.use((err, req, res, next) => {
+  if (err instanceof multerLib.MulterError) {
+    return res.status(400).json({ where: 'multer', code: err.code, message: err.message });
+  }
+  if (err && err.message && err.message.includes('Type de fichier non autorisé')) {
+    return res.status(400).json({ where: 'fileFilter', message: err.message });
+  }
+  console.error('Unhandled error:', err);
+  return res.status(400).json({ where: 'unknown', message: err.message || 'Bad Request' });
 });
 
 // Export de l'application
