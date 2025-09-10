@@ -102,6 +102,20 @@ app.use('/debug', require('./Routes/debug'));
 
 app.get('/health', (req, res) => res.status(200).json({ ok: true }));
 
+// app.js (temporaire)
+const { upload } = require('./middleware/upload-cloudinary');
+
+app.post('/debug/multer', upload, (req, res) => {
+  res.json({
+    hasFile: !!req.file,
+    fieldname: req.file?.fieldname,
+    mimetype: req.file?.mimetype,
+    size: req.file?.size,
+    hasBuffer: !!req.file?.buffer
+  });
+});
+
+
 // 8) 404
 app.use((req, res) => {
   res.status(404).json({ error: 'Ressource introuvable' });
