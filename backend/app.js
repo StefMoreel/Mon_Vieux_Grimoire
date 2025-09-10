@@ -6,14 +6,13 @@ const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const mongoSanitize = require('express-mongo-sanitize');
 const xss = require('xss-clean');
-const path = require('path');
+const path = require('node:path');
 const mongoose = require('mongoose');
 
 // Connexion à MongoDB
 mongoose.connect(process.env.MONGO_URI, {
   dbName: process.env.MONGO_DBNAME || 'test',
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
+
 })
   .then(() => console.log('✅ Connexion à MongoDB réussie !'))
   .catch((err) => console.error('❌ Connexion à MongoDB échouée :', err.message));
@@ -56,11 +55,11 @@ app.use(mongoSanitize()); // Protège contre les injections NoSQL
 app.use(xss()); // Protège contre les attaques XSS
 
 // 5. Middleware pour les fichiers statiques (images)
-app.use('/images', express.static('images', {
-  setHeaders: (res, path) => {
-    res.header('Access-Control-Allow-Origin', process.env.CLIENT_URL || 'http://localhost:3000');
-    res.header('Access-Control-Allow-Credentials', 'true');
-  }
+const IMAGES_DIR = process.env.IMAGES_DIR || path.join(__dirname, 'images');
+app.use('/images', express.static(IMAGES_DIR, {
+  index: false,
+  immutable: true,
+  maxAge: '1y',
 }));
 
 // 6. Parsing des requêtes JSON
