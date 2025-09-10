@@ -39,27 +39,52 @@ exports.getBookById = (req, res, next) => {
 };
 
 // Create a new book in the database with image upload handling via multer middleware 
+// controller/book.js
 exports.createBook = async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ where:'multer', message:'Image manquante (champ "image")' });
+    // 1) S'assurer qu'on a un fichier
+    if (!req.file) {
+      return res.status(400).json({ where: 'multer', message: 'Image manquante (champ "image")' });
+    }
+
+    // 2) Supporter deux formats :
+    //    - A) multipart avec 'book' = string JSON
+    //    - B) multipart avec champs plats (title, author, year, genre)
+    let bookObject = {};
+    if (typeof req.body.book === 'string') {
+      try {
+        bookObject = JSON.parse(req.body.book);
+      } catch {
+        return res.status(400).json({ where: 'parse', message: 'book doit être une chaîne JSON valide' });
+      }
+    } else {
+      // champs plats déjà dans req.body
+      bookObject = { ...req.body };
+    }
+
+    // Nettoyage
+    delete bookObject._id;
+    delete bookObject._userId;
 
     const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+
     const book = new Book({
-      ...req.body,                 // validateBook aplatit déjà si besoin
+      ...bookObject,
       userId: req.auth.userId,
-      imageUrl: `${baseUrl}/images/${req.file.filename}`,
+      imageUrl: `${baseUrl}/images/${req.file.filename}`, // nom final mis à jour par sharp
     });
 
     const saved = await book.save();
     return res.status(201).json(saved);
   } catch (err) {
-    console.error('createBook error:', err);
+    console.error('❌ Erreur serveur :', err);
     if (err?.name === 'ValidationError') {
-      return res.status(400).json({ where:'mongoose', message: err.message, errors: err.errors });
+      return res.status(400).json({ where: 'mongoose', message: err.message, errors: err.errors });
     }
-    return res.status(500).json({ where:'controller', message: err?.message || 'Erreur interne du serveur' });
+    return res.status(500).json({ where: 'controller', message: err?.message || 'Erreur interne du serveur' });
   }
 };
+
 
 
 // Get the top 3 best-rated books from the database
