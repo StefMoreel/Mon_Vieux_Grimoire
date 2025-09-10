@@ -2,42 +2,58 @@ const Book = require('../models/Book');
 const fs = require('fs');
 const cloudinary = require('../services/cloudinary.js');
 
+
+// helper commun
+function resolveImageUrl(imageUrl, req) {
+  if (!imageUrl) return imageUrl;
+  // Déjà une URL absolue ? (Cloudinary, etc.) -> on ne modifie pas
+  if (/^https?:\/\//i.test(imageUrl)) return imageUrl;
+
+  // Si tu as stocké "images/xxx.jpg", on enlève le préfixe pour éviter le double /images
+  const filename = imageUrl.replace(/^\/?images\//i, '');
+
+  const base = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+  return `${base}/images/${filename}`;
+}
+
 // Get all books from the database
-exports.getAllBooks = (req, res, next) => {
-    Book.find()
-        .then(books => {
-            const updatedBooks = books.map(book => {
-                if (book.imageUrl) {
-                    const filename = book.imageUrl.split('/images/').pop();
-                    book.imageUrl = `${process.env.BASE_URL}/images/${filename}`;
-                }
-                return book;
-            });
-            res.status(200).json(updatedBooks);
-        })
-        .catch(error => {
-            res.status(400).json({ error });
-        });
+exports.getAllBooks = async (req, res) => {
+  try {
+    const books = await Book.find().lean(); // POJOs
+    const updated = books.map(b => {
+      return {
+        ...b,
+        imageUrl: resolveImageUrl(b.imageUrl, req),
+        averageRating:
+          typeof b.averageRating === 'number'
+            ? Math.round((b.averageRating + Number.EPSILON) * 100) / 100
+            : 0,
+      };
+    });
+    res.status(200).json(updated);
+  } catch (error) {
+    res.status(400).json({ error });
+  }
 };
 
-// Get a single book by ID from the database
-exports.getBookById = (req, res, next) => {
-    Book.findOne({ _id: req.params.id })
-        .then(book => {
-            if (!book) {
-                return res.status(404).json({ error: 'Book not found' });
-            }
-            if (book.imageUrl) {
-                const filename = book.imageUrl.split('/images/').pop();
-                book.imageUrl = `${process.env.BASE_URL}/images/${filename}`;
-            }
-            book.averageRating = Number(book.averageRating.toFixed(2));
-            res.status(200).json(book);
-        })
-        .catch(error => {
-            res.status(404).json({ error });
-        });
+exports.getBookById = async (req, res) => {
+  try {
+    const b = await Book.findById(req.params.id).lean();
+    if (!b) return res.status(404).json({ error: 'Book not found' });
+    const book = {
+      ...b,
+      imageUrl: resolveImageUrl(b.imageUrl, req),
+      averageRating:
+        typeof b.averageRating === 'number'
+          ? Math.round((b.averageRating + Number.EPSILON) * 100) / 100
+          : 0,
+    };
+    res.status(200).json(book);
+  } catch (error) {
+    res.status(404).json({ error });
+  }
 };
+
 
 // Create a new book in the database with image upload handling via multer middleware 
 // controller/book.js
