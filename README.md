@@ -1,8 +1,10 @@
-# 📚 Mon Vieux Grimoire
+# 📚 Mon Vieux Grimoire : https://mon-vieux-grimoire-kappa.vercel.app/
 
 Projet de site de référencement et de notation de livres.  
 Développé dans le cadre de la formation **OpenClassrooms - Développeur Web**.
 
+Déploiement frontend : VERCEL
+Déploiement backend : RENDER
 ---
 
 ## 🚀 Stack technique
