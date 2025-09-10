@@ -92,22 +92,39 @@ exports.createBook = async (req, res) => {
 };
 
 // Get the top 3 best-rated books from the database
-exports.getBestRatedBooks = (req, res, next) => {
-    Book.find().sort({ averageRating: -1 }).limit(3)
-        .then(books => {
-            const updatedBooks = books.map(book => {
-                if (book.imageUrl) {
-                    const filename = book.imageUrl.split('/images/').pop();
-                    book.imageUrl = `${process.env.BASE_URL}/images/${filename}`;
-                }
-                return book;
-            });
-            res.status(200).json(updatedBooks);
-        })
-        .catch(error => {
-            res.status(400).json({ error });
-        });
+// helper commun (mets-le dans un fichier util ou en haut du contrôleur)
+function resolveImageUrl(imageUrl, req) {
+  if (!imageUrl) return imageUrl;
+  // URL absolue (Cloudinary etc.) -> on ne touche pas
+  if (/^https?:\/\//i.test(imageUrl)) return imageUrl;
+  // Chemin local -> fabrique l’URL publique
+  const filename = imageUrl.replace(/^\/?images\//i, '');
+  const base = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+  return `${base}/images/${filename}`;
+}
+
+exports.getBestRatedBooks = async (req, res) => {
+  try {
+    const books = await Book.find()
+      .sort({ averageRating: -1, _id: 1 }) // tie-breaker stable
+      .limit(3)
+      .lean(); // évite de muter des docs Mongoose
+
+    const updated = books.map(b => ({
+      ...b,
+      imageUrl: resolveImageUrl(b.imageUrl, req),
+      averageRating:
+        typeof b.averageRating === 'number'
+          ? Math.round((b.averageRating + Number.EPSILON) * 100) / 100
+          : 0,
+    }));
+
+    res.status(200).json(updated);
+  } catch (error) {
+    res.status(400).json({ error: error.message || error });
+  }
 };
+
 
 // Add a rating to a book and update its average rating in the database
 exports.addRating = async (req, res, next) => {
