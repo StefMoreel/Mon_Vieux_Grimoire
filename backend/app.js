@@ -100,6 +100,8 @@ app.use('/api/auth', userRoutes);
 
 app.use('/debug', require('./Routes/debug'));
 
+app.get('/health', (req, res) => res.status(200).json({ ok: true }));
+
 // 8) 404
 app.use((req, res) => {
   res.status(404).json({ error: 'Ressource introuvable' });
