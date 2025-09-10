@@ -2,9 +2,10 @@
 const multer = require('multer');
 const cloudinary = require('../services/cloudinary');
 
+const MAX_FILE_MB = parseInt(process.env.MAX_FILE_MB || '10', 10); // 10 Mo par défaut
 const upload = multer({
   storage: multer.memoryStorage(),                // pas d'écriture disque Render
-  limits: { fileSize: 5 * 1024 * 1024 },         // 5 Mo max (ajuste si besoin)
+  limits: { fileSize: MAX_FILE_MB * 1024 * 1024 },         // 5 Mo max (ajuste si besoin)
   fileFilter: (req, file, cb) => {
     const ok = ['image/jpeg','image/jpg','image/png','image/webp'].includes(file.mimetype);
     cb(ok ? null : new Error('Type de fichier non autorisé'), ok);
