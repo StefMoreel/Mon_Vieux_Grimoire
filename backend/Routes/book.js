@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const dataCtrl = require('../controller/book');
 const auth = require('../middleware/auth');
-const upload = require('../middleware/multer-config');
+const multer = require('../middleware/multer-config');
 const sharp = require('../middleware/sharp-config');
 const { validateBook, validateBookUpdate } = require('../middleware/userValidator');
 const { upload, uploadToCloudinary } = require('../middleware/upload-cloudinary');
@@ -11,8 +11,8 @@ router.get('/', dataCtrl.getAllBooks); // Public route to get all books
 router.get('/bestrating', dataCtrl.getBestRatedBooks); // Public route to get top 3 best-rated books
 router.get('/:id', dataCtrl.getBookById); // Public route to get a single book by ID
 router.post('/:id/rating', auth, dataCtrl.addRating); // Protected route to add a rating to a book
-router.put('/:id', auth, upload, sharp, validateBookUpdate, uploadToCloudinary, dataCtrl.updateBook); // Protected route to update a book
-router.post('/', auth, upload, validateBook, sharp, uploadToCloudinary, (req, res, next) => {
+router.put('/:id', auth, multer, sharp, validateBookUpdate, uploadToCloudinary, dataCtrl.updateBook); // Protected route to update a book
+router.post('/', auth, multer, validateBook, sharp, uploadToCloudinary, (req, res, next) => {
   console.log('[POST /books] BODY =', req.body);
   console.log('[POST /books] FILE =', req.file);
   next();
