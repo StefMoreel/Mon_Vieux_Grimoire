@@ -82,8 +82,6 @@ app.use((err, req, res, next) => {
 });
 
 // handler d’erreurs global
-const multerLib = require('multer');
-
 app.use((err, req, res, next) => {
   console.error('[ERROR]', err); // ← regarde les Logs Render
   if (err instanceof multerLib.MulterError) {
