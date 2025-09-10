@@ -6,6 +6,7 @@ const bookSchema = mongoose.Schema({ // Define the schema for the Book model
     title: { type: String, required: true },
     author: { type: String, required: true },
     imageUrl: { type: String, required: true },
+    imagePublicId: { type: String }, // ⬅️ stocke l’id Cloudinary pour delete
     year: { type: Number, required: true },
     genre: { type: String, required: true },
     ratings: [

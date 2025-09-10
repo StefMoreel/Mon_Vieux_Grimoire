@@ -30,6 +30,7 @@ const IMG_ALLOW = [
   process.env.CLIENT_URL,
   "https://mon-vieux-grimoire-5a88.onrender.com",
   "blob:",
+  "https://res.cloudinary.com",
 ].filter(Boolean);
 
 app.use(helmet.contentSecurityPolicy({

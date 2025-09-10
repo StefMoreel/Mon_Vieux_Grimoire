@@ -1,5 +1,6 @@
 const Book = require('../models/Book');
 const fs = require('fs');
+const cloudinary = require('../services/cloudinary');
 
 // Get all books from the database
 exports.getAllBooks = (req, res, next) => {
@@ -42,50 +43,37 @@ exports.getBookById = (req, res, next) => {
 // controller/book.js
 exports.createBook = async (req, res) => {
   try {
-    // 1) S'assurer qu'on a un fichier
-    if (!req.file) {
-      return res.status(400).json({ where: 'multer', message: 'Image manquante (champ "image")' });
-    }
-
-    // 2) Supporter deux formats :
-    //    - A) multipart avec 'book' = string JSON
-    //    - B) multipart avec champs plats (title, author, year, genre)
+    // Champs plats ou 'book' JSON (si tu gardes les 2 formats)
     let bookObject = {};
     if (typeof req.body.book === 'string') {
-      try {
-        bookObject = JSON.parse(req.body.book);
-      } catch {
-        return res.status(400).json({ where: 'parse', message: 'book doit être une chaîne JSON valide' });
-      }
+      bookObject = JSON.parse(req.body.book);
     } else {
-      // champs plats déjà dans req.body
       bookObject = { ...req.body };
     }
-
-    // Nettoyage
     delete bookObject._id;
     delete bookObject._userId;
 
-    const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+    if (!req.cloudinary?.url) {
+      return res.status(400).json({ where:'multer/cloudinary', message:'Image manquante ou upload Cloudinary échoué' });
+    }
 
     const book = new Book({
       ...bookObject,
       userId: req.auth.userId,
-      imageUrl: `${baseUrl}/images/${req.file.filename}`, // nom final mis à jour par sharp
+      imageUrl: req.cloudinary.url,     // URL finale hébergée par Cloudinary
+      imagePublicId: req.cloudinary.public_id, // garde l’id pour delete
     });
 
     const saved = await book.save();
     return res.status(201).json(saved);
   } catch (err) {
-    console.error('❌ Erreur serveur :', err);
     if (err?.name === 'ValidationError') {
-      return res.status(400).json({ where: 'mongoose', message: err.message, errors: err.errors });
+      return res.status(400).json({ where:'mongoose', message: err.message, errors: err.errors });
     }
-    return res.status(500).json({ where: 'controller', message: err?.message || 'Erreur interne du serveur' });
+    console.error('createBook error:', err);
+    return res.status(500).json({ where:'controller', message: err?.message || 'Erreur interne du serveur' });
   }
 };
-
-
 
 // Get the top 3 best-rated books from the database
 exports.getBestRatedBooks = (req, res, next) => {
@@ -134,63 +122,61 @@ exports.addRating = async (req, res, next) => {
 
 
 // Update book details in the database, including image if provided 
-exports.updateBook = (req, res, next) => {
-    const baseUrl = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
-    const bookObject = req.file ? {
-        ...JSON.parse(req.body.book),
-        imageUrl: `${baseUrl}/images/${req.file.filename}` // Corrige ici
-    } : { ...req.body };
-    delete bookObject._userId;
+exports.updateBook = async (req, res) => {
+  try {
+    // 1) Trouver le livre de l’utilisateur
+    const book = await Book.findOne({ _id: req.params.id, userId: req.auth.userId });
+    if (!book) return res.status(404).json({ message: 'Livre introuvable' });
 
-    Book.findOne({ _id: req.params.id })
-        .then(book => {
-            if (!book) {
-                return res.status(404).json({ error: 'Book not found' });
-            }
-            if (book.userId !== req.auth.userId) {
-                return res.status(403).json({ error: 'Unauthorized request' });
-            }
-            Book.updateOne({ _id: req.params.id }, { ...bookObject, _id: req.params.id })
-                .then(() => {
-                    if (req.file && book.imageUrl) {
-                        const oldFilename = book.imageUrl.split('/images/').pop();
-                        fs.unlink(`images/${oldFilename}`, (err) => {
-                            if (err) console.error('Error deleting old image:', err);
-                        });
-                    }
-                    res.status(200).json({ message: 'Book updated successfully!' });
-                })
-                .catch(error => res.status(400).json({ error }));
-        })
-        .catch(error => {
-            res.status(400).json({ error });
-        });
+    // 2) Préparer les updates à partir du body (champs plats OU book JSON déjà aplati par votre parseur)
+    const updates = {};
+    ['title','author','year','genre','ratings'].forEach(k => {
+      if (typeof req.body[k] !== 'undefined') updates[k] = req.body[k];
+    });
+
+    // 3) Nouvelle image ? (uploadToCloudinary a rempli req.cloudinary si req.file présent)
+    let oldPublicIdToDelete = null;
+    if (req.cloudinary?.url && req.cloudinary?.public_id) {
+      updates.imageUrl = req.cloudinary.url;
+      updates.imagePublicId = req.cloudinary.public_id;
+      if (book.imagePublicId) oldPublicIdToDelete = book.imagePublicId;
+    }
+
+    // 4) Appliquer les updates
+    Object.assign(book, updates);
+    const saved = await book.save();
+
+    // 5) Supprimer l’ancienne image si remplacée (après save OK)
+    if (oldPublicIdToDelete) {
+      try { await cloudinary.uploader.destroy(oldPublicIdToDelete); } catch (e) { /* soft-fail */ }
+    }
+
+    return res.status(200).json(saved);
+  } catch (err) {
+    if (err?.name === 'ValidationError') {
+      return res.status(400).json({ where:'mongoose', message: err.message, errors: err.errors });
+    }
+    console.error('updateBook error:', err);
+    return res.status(500).json({ where:'controller', message: err?.message || 'Erreur interne du serveur' });
+  }
 };
 
 
 // Delete a book from the database if the authenticated user is the owner 
-exports.deleteBook = (req, res, next) => {
-    Book.findOne({ _id: req.params.id }) // Find the book by ID
-        .then(book => { // Check if the book exists
-            let oldImageUrl = book.imageUrl; // Store the old image URL for potential deletion
-            if (!book) {
-                return res.status(404).json({ error: 'Book not found' }); // Book not found
-            } 
-            if (book.userId !== req.auth.userId) { // Check if the authenticated user is the owner of the book
-                return res.status(403).json({ error: 'Unauthorized request' }); // Unauthorized if not the owner
-            }
-            Book.deleteOne({ _id: req.params.id }) // Delete the book from the database 
-                .then(() => {
-                    if (oldImageUrl) { // If there was an image associated with the book, delete the image file
-                        const oldFilename = oldImageUrl.split('/images/')[1]; // Extract filename from the image URL 
-                        fs.unlink(`images/${oldFilename}`, (err) => { // Delete the image file from the server
-                            if (err) console.error('Error deleting image:', err); // Log any errors during deletion
-                        });
-                    }
-                    res.status(200).json({ message: 'Book deleted successfully!' })}) // Success response 
-                .catch(error => res.status(400).json({ error })); // Error during deletion 
-        })
-        .catch(error => {
-            res.status(400).json({ error });
-        });
+
+exports.deleteBook = async (req, res) => {
+  try {
+    const book = await Book.findOne({ _id: req.params.id, userId: req.auth.userId });
+    if (!book) return res.status(404).json({ message: 'Livre introuvable' });
+
+    // Supprime l’image si on a un public_id
+    if (book.imagePublicId) {
+      try { await cloudinary.uploader.destroy(book.imagePublicId); } catch(e) { /* ignore soft */ }
+    }
+
+    await Book.deleteOne({ _id: req.params.id });
+    return res.status(200).json({ message: 'Livre supprimé' });
+  } catch (e) {
+    return res.status(500).json({ message: e.message });
+  }
 };

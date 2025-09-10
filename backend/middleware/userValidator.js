@@ -47,4 +47,18 @@ const validateBook = [
   }
 ];
 
-module.exports = { validateSignup, validateBook };
+// Validation pour la mise à jour d’un livre (champs optionnels)
+  const validateBookUpdate = [
+  parseBookIfNeeded,
+  body('title').optional().trim().notEmpty().withMessage('title ne doit pas être vide'),
+  body('author').optional().trim().notEmpty().withMessage('author ne doit pas être vide'),
+  body('year').optional().toInt().isInt({ min: 1 }).withMessage("year doit être un entier positif"),
+  body('genre').optional().trim().notEmpty().withMessage('genre ne doit pas être vide'),
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    next();
+  }
+];
+
+module.exports = { validateSignup, validateBook, validateBookUpdate };
