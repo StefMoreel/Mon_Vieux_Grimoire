@@ -15,7 +15,7 @@ router.get('/cloudinary/ping', async (req, res) => {
   }
 });
 
-// /debug/cloudinary/test -> upload simple (pas d’auth, pas de DB)
+// /debug/cloudinary/test -> upload simple
 router.post('/cloudinary/test', upload, async (req, res) => {
   try {
     if (!req.file?.buffer) return res.status(400).json({ error: 'image manquante' });
